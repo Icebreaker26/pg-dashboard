@@ -1,19 +1,28 @@
+# Todas las consultas SQL que usa el dashboard viven aca.
+# La idea es que app.py nunca escriba SQL directamente, solo llame estas funciones
+# y reciba de vuelta un DataFrame de pandas listo para graficar.
+
 import pandas as pd
 from sqlalchemy import text
 from db import engine
 
+# Rangos de tiempo que ofrece el selector del dashboard, en horas
 RANGOS_HORAS = {"1h": 1, "3h": 3, "24h": 24}
 
 
 def bucket_para_rango(rango):
+    # Para 1h y 3h se agrupa por minuto (mas detalle), para 24h por hora
+    # (si agrupara por minuto en 24h serian 1440 puntos, demasiado para una grafica)
     return "minute" if rango in ("1h", "3h") else "hour"
 
 
 def minutos_por_bucket(rango):
+    # Sirve para convertir "total de requests por bucket" en RPM (requests por minuto)
     return 1 if bucket_para_rango(rango) == "minute" else 60
 
 
 def listar_servicios():
+    # Trae los valores distintos de la columna svc, para llenar el dropdown de servicios
     sql = text("SELECT DISTINCT svc FROM logs ORDER BY svc")
     with engine.connect() as conn:
         df = pd.read_sql(sql, conn)
@@ -21,6 +30,8 @@ def listar_servicios():
 
 
 def listar_urls_top(limite=15):
+    # No traemos todas las URLs distintas porque pueden ser muchas (ej: /orders/{id}
+    # con ids distintos). Mostramos solo las mas frecuentes para que el dropdown sea usable.
     sql = text("""
         SELECT url, count(*) AS total
         FROM logs
@@ -34,6 +45,9 @@ def listar_urls_top(limite=15):
 
 
 def filtros_comunes(servicio, url):
+    # Arma el pedazo de WHERE y los parametros para filtrar por servicio y/o url.
+    # Se usa tanto en consultar_serie como en consultar_errores_recientes para no
+    # repetir la misma logica de filtros en los dos lados.
     condiciones = []
     params = {}
 
@@ -50,6 +64,9 @@ def filtros_comunes(servicio, url):
 
 
 def consultar_serie(servicio, url, rango):
+    # Consulta principal del dashboard: agrupa los logs en buckets de tiempo y calcula,
+    # por cada bucket, el promedio de duracion, p95, p99 y conteo de errores 4xx/5xx.
+    # De aca salen las 3 graficas (tiempo de respuesta, throughput y errores).
     horas = RANGOS_HORAS[rango]
     bucket = bucket_para_rango(rango)
     filtro_sql, params = filtros_comunes(servicio, url)
@@ -76,11 +93,15 @@ def consultar_serie(servicio, url, rango):
     if df.empty:
         return df
 
+    # rpm = requests por minuto. Si el bucket ya es de un minuto, rpm = total.
+    # Si el bucket es de una hora, dividimos el total entre 60.
     df["rpm"] = df["total"] / minutos_por_bucket(rango)
     return df
 
 
 def consultar_errores_recientes(servicio, url, rango, limite=20):
+    # Trae los ultimos N logs con error (status >= 400) dentro del rango y filtros
+    # seleccionados, para mostrarlos en la tabla "Ultimos errores" del dashboard.
     horas = RANGOS_HORAS[rango]
     filtro_sql, params = filtros_comunes(servicio, url)
     params["limite"] = limite
