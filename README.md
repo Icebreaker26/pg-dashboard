@@ -32,7 +32,10 @@ Esto levanta el servidor en `http://127.0.0.1:8050`.
 
 ## Funcionalidad
 
-- Selector de servicio (`svc`)
+- Selector de servicio (`svc`) y de URL (top 15 por volumen)
 - Selector de rango de tiempo: última hora, 3 horas o 24 horas
 - Selector de frecuencia de actualización automática: cada 10s o cada 60s
+- KPIs: requests en el rango, % de errores, p95 actual y RPM actual
 - Gráficas de tiempo de respuesta, throughput (RPM) y errores 4xx/5xx
+- Tabla con los últimos errores (status >= 400)
+- Botón para descargar la serie filtrada en CSV
