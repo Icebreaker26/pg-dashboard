@@ -4,12 +4,6 @@ Notebook del ejercicio "¿Vender más significa ganar más?" (tienda Conecta), c
 
 ## Cómo usarlo
 
-**Opción 1: Google Colab**
-1. Entra a [colab.research.google.com](https://colab.research.google.com).
-2. Sube el archivo `Ejercicio_ventas_y_Pareto.ipynb`.
-3. Ejecuta las celdas en orden con `Shift + Enter`.
-
-**Opción 2: Jupyter local**
 1. Instala las librerías necesarias:
    ```
    pip install pandas numpy seaborn matplotlib jupyter
